@@ -1,6 +1,8 @@
 const fs = require("fs");
 const cloudinary = require("../utils/cloudinary");
-const { User } = require("../models");
+const { User, Friend } = require("../models");
+const AppError = require("../utils/appError");
+const friendService = require("../services/friendService");
 
 exports.updateUser = async (req, res, next) => {
   try {
@@ -37,6 +39,27 @@ exports.updateUser = async (req, res, next) => {
     });
 
     res.status(200).json({ user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getUserFriends = async (req, res, next) => {
+  try {
+    const id = +req.params.id;
+    const user = await User.findOne({
+      where: { id },
+      attributes: { exclude: "password" }
+    });
+
+    if (!user) {
+      throw new AppError("user not found", 400);
+    }
+
+    const friends = await friendService.findUserFriendsByUserId(id);
+    const statusWithMe = await friendService.findStatusWithMe(req.user.id, id);
+    // const statusWithMe = await Friend.findOne(req.user.id);
+    res.status(200).json({ user, friends, statusWithMe });
   } catch (err) {
     next(err);
   }
